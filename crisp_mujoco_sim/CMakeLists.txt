@@ -19,11 +19,17 @@ find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 
-set(MUJOCO_DIR "$ENV{HOME}/mujoco-$ENV{MUJOCO_VERSION}") # CI setting
-set(MUJOCO_INCLUDE_DIRS ${MUJOCO_DIR}/include)
-set(MUJOCO_LIBRARIES
-        ${MUJOCO_DIR}/lib/libmujoco.so
-)
+# Prefer find_package if mujoco config is available (conda-forge), else fallback to env var path
+find_package(mujoco CONFIG QUIET)
+if(mujoco_FOUND)
+  message(STATUS "Using mujoco found via find_package")
+  set(MUJOCO_LIBRARIES mujoco::mujoco)
+  # Include dirs handled automatically via target
+else()
+  set(MUJOCO_DIR "$ENV{HOME}/mujoco-$ENV{MUJOCO_VERSION}") # CI setting
+  set(MUJOCO_INCLUDE_DIRS ${MUJOCO_DIR}/include)
+  set(MUJOCO_LIBRARIES ${MUJOCO_DIR}/lib/libmujoco.so)
+endif()
 
 # --------------------------------------------------------------------------------
 # Make sure that library relocation works for both build and install.
@@ -74,8 +80,10 @@ add_library(mujoco_simulator SHARED
 target_include_directories(mujoco_simulator PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
-        ${MUJOCO_INCLUDE_DIRS}
 )
+if(DEFINED MUJOCO_INCLUDE_DIRS)
+  target_include_directories(mujoco_simulator PUBLIC ${MUJOCO_INCLUDE_DIRS})
+endif()
 
 # X11 OpenGL: link with libmujoco210.so, libglew.so, libGL.so
 target_link_libraries(mujoco_simulator PUBLIC

@@ -1,0 +1,95 @@
+[workspace]
+channels = ["robostack-humble", "conda-forge"]
+name = "crisp_controllers_demos"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+# Build task
+build = "colcon build"
+
+# Source the workspace (helper used by other tasks)
+# Note: Tasks that need sourcing should use: bash -c "source install/setup.bash && ..."
+
+# -- Robot launch tasks --
+launch_franka = { cmd = '''bash -c "source install/setup.bash && \
+  source scripts/setup_middleware.sh && \
+  ros2 launch crisp_controllers_robot_demos franka.launch.py \
+  arm_id:=fr3 use_fake_hardware:=${FRANKA_FAKE_HARDWARE:-false} robot_ip:=${ROBOT_IP:-172.16.0.2} use_rviz:=True"''', depends-on = ["build"] }
+
+launch_franka_sim = { cmd = '''bash -c "source install/setup.bash && \
+  ros2 launch crisp_controllers_robot_demos franka.launch.py \
+  arm_id:=fr3 use_fake_hardware:=true robot_ip:=127.0.0.1 use_rviz:=True"''', depends-on = ["build"] }
+
+launch_dual_franka = { cmd = '''bash -c "source install/setup.bash && \
+  source scripts/setup_middleware.sh && \
+  ros2 launch crisp_controllers_robot_demos dual_franka.launch.py \
+  use_fake_hardware:=${FRANKA_FAKE_HARDWARE:-false} \
+  left_robot_ip:=${LEFT_ROBOT_IP:-172.16.1.2} right_robot_ip:=${RIGHT_ROBOT_IP:-172.16.0.2}"''', depends-on = ["build"] }
+
+launch_kinova = { cmd = '''bash -c "source install/setup.bash && \
+  source scripts/setup_middleware.sh && \
+  ros2 launch crisp_controllers_robot_demos kinova_gen3.launch.py"''', depends-on = ["build"] }
+
+launch_iiwa = { cmd = '''bash -c "source install/setup.bash && \
+  source scripts/setup_middleware.sh && \
+  ros2 launch crisp_controllers_robot_demos iiwa.launch.py"''', depends-on = ["build"] }
+
+# -- Zenoh router --
+launch_zenoh_router = '''bash -c "export RMW_IMPLEMENTATION=rmw_zenoh_cpp && \
+  export RUST_LOG=zenoh=info && \
+  ros2 doctor -r | grep rmw_zenoh_cpp && \
+  ros2 daemon stop && ros2 daemon start && \
+  ros2 run rmw_zenoh_cpp rmw_zenohd"'''
+
+# -- Camera launch tasks --
+launch_usb_camera = '''bash -c "source scripts/setup_middleware.sh && \
+  ros2 run usb_cam usb_cam_node_exe --ros-args -r __ns:=/${CAMERA_NAMESPACE:-camera} -p pixel_format:='mjpeg2rgb'"'''
+
+launch_realsense = '''bash -c "source scripts/setup_middleware.sh && \
+  echo 'Using serial number: ${SERIAL_NUMBER:-auto}' && \
+  ros2 launch realsense2_camera rs_launch.py \
+  camera_name:=${CAMERA_NAME:-camera} camera_namespace:=${CAMERA_NAMESPACE:-camera} ${SERIAL_NUMBER:+serial_no:=_${SERIAL_NUMBER}}"'''
+
+launch_realsense_left = '''bash -c "source scripts/setup_middleware.sh && \
+  ros2 launch realsense2_camera rs_launch.py \
+  camera_name:=${CAMERA_NAME:-left_wrist_camera} camera_namespace:=${CAMERA_NAMESPACE:-left} ${SERIAL_NUMBER:+serial_no:=_${SERIAL_NUMBER}}"'''
+
+launch_realsense_right = '''bash -c "source scripts/setup_middleware.sh && \
+  ros2 launch realsense2_camera rs_launch.py \
+  camera_name:=${CAMERA_NAME:-right_wrist_camera} camera_namespace:=${CAMERA_NAMESPACE:-right}"'''
+
+[dependencies]
+python = "3.11.*"
+pip = ">=25.3,<26"
+cmake = ">=4.2.1,<5"
+git = ">=2.52.0,<3"
+wget = ">=1.21.4,<2"
+unzip = ">=6.0,<7"
+eigen = ">=3.4.0,<4"
+poco = ">=1.14.2,<2"
+ros-humble-rclpy = ">=3.3.16,<4"
+ros-humble-ros2-control = ">=2.51.0,<3"
+ros-humble-ros2-controllers = ">=2.48.0,<3"
+ros-humble-rmw-cyclonedds-cpp = ">=1.3.4,<2"
+ros-humble-rmw-zenoh-cpp = ">=0.1.2,<0.2"
+ros-humble-image-transport = ">=3.1.12,<4"
+ros-humble-usb-cam = ">=0.8.1,<0.9"
+ros-humble-xacro = ">=2.0.13,<3"
+ros-humble-franka-msgs = ">=1.0.0,<2"
+ros-humble-launch = ">=1.0.9,<2"
+ros-humble-launch-ros = ">=0.19.10,<0.20"
+ros-humble-launch-testing-ros = ">=0.19.10,<0.20"
+ros-humble-launch-xml = ">=1.0.9,<2"
+ros-humble-desktop = ">=0.10.0,<0.11"
+colcon-common-extensions = ">=0.3.0,<0.4"
+mujoco = ">=3.3.2,<4"
+ros-humble-franka-description = ">=0.4.0,<0.5"
+ros-humble-franka-gripper = ">=1.0.0,<2"
+libcap = ">=2.71,<3"
+
+[activation]
+scripts = ["scripts/pixi_activate.sh"]
+
+[pypi-dependencies]
+xacro = ">=2.1.1, <3"
